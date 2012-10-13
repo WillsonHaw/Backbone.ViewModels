@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Backbone.ViewModel tests</title>
+        <script type="text/javascript" src="http://commondev.iqmetrix.net/js/iq.bootstrap.min.js"></script>
+        <script type="text/javascript">
+            Bootstrap.load([
+                "backbone",
+                "handlebars",
+                "@../backbone.viewmodel.js",
+                "@app.js"
+            ]);
+        </script>
+    </head>
+    
+    <body>
+        <table>
+            <thead>
+                <th>Name</td>
+                <th>Post</td>
+                <th>Post Date</td>
+            </thead>
+            <tbody id="tweet-content">
+            </tbody>
+        </table>
+        
+        <script type="text/html" id="tweet-template">
+            <td>{{Name}}</td>
+            <td>{{{Post}}}</td>
+            <td>{{PostDate}}</td>
+        </script>
+    </body>
+</html>
