@@ -22,46 +22,84 @@
         },
         properties: {},
         _setAttribute: Backbone.Model.prototype.set,
-        _doGet: function (attr) {
+        read: function (attr, options) {
             var property = this.properties[attr];
+            var val;
             
-            if (property.get) {
-                if (_.isFunction(property.get)) {
-                    var val = property.get.call(this, attr);
-                    this._setAttribute(attr, val, { silent: true });
+            if (property.read) {
+                if (_.isFunction(property.read)) {
+                    val = property.read.call(this, attr);
                 } else {
-                    this._setAttribute(attr, this.model.get(property.get), { silent: true });
+                    val = this.model.get(property.read);
                 }
             } else {
-                this._setAttribute(attr, this.model.get(attr), { silent: true });
+                val = this.model.get(attr);
             }
+            
+            this._setAttribute(attr, val, options);
+            return val;
         },
-        _doSet: function (attr, value) {
+        _doSet: function (attr, value, options) {
             var property = this.properties[attr];
+
+            //Run validation
+            if (property.validate && _.isFunction(property.validate)) {
+                var error = property.validate(value);
+                if (error) {
+                    if (options.error) {
+                        options.error(this, error, options);
+                    } else {
+                        this.trigger("error", this, error, options);
+                    }
+                    return false;
+                }
+            }
             
-            if (property.set) {
-                if (_.isFunction(property.set)) {
-                    return property.set.call(this, value, { silent: true });
+            var result;
+
+            if (property.write) {
+                if (_.isFunction(property.write)) {
+                    result = property.write.call(this, value, options);
                 } else {
-                    return this.model.set(property.set, value, { silent: true });
+                    result = this.model.set(property.write, value, options);
                 }
             } else {
-                return this.model.set(attr, value, { silent: true });
+                result = true;
             }
+
+            if (result)
+                this._setAttribute(attr, value);
+                
+            return result;
         },
         constructor: function (model) {
             var attrs = {};
             var self = this;
 
             this.model = model;
+            this._escapedAttributes = {};
+            this.cid = _.uniqueId('c');
+            this.changed = {};
+            this._silent = {};
+            this._pending = {};
+            this.attributes = {};
+            
+            //Set all initial values first, otherwise read functions won't be able to use them
+            _.each(this.properties, function (property, attr) {
+                attrs[attr] = property.initial;
+            });
+            this._setAttribute(attrs, { silent: true });
+            
+            //Set all the model attribute values if they exist
             _.each(this.properties, function (property, attr) {
                 attrs[attr] =
-                    (_.isFunction(property.get) && property.get.call(self)) ||
+                    (_.isFunction(property.read) && property.read.call(self)) ||
+                    (_.isString(property.read) && model.attributes[property.read]) ||
                     model.attributes[attr] ||
                     property.initial;
 
                 var changeCallback = function () {
-                    this._doGet(attr);
+                    this.read(attr, { silent: true });
                 };
 
                 //Automatically bind to model change events
@@ -75,6 +113,7 @@
                     self.model.on("change:" + attr, changeCallback, self);
                 }
             });
+            this._setAttribute(attrs, { silent: true });
 
             //our doGet triggers sets silently, so this triggers a change on the VM
             this.model.on("change", function () {
@@ -86,13 +125,6 @@
                 this.trigger("error", model, err, obj);
             }, this);
 
-            this.attributes = {};
-            this._escapedAttributes = {};
-            this.cid = _.uniqueId('c');
-            this.changed = {};
-            this._silent = {};
-            this._pending = {};
-            this._setAttribute(attrs, { silent: true });
             // Reset change tracking.
             this.changed = {};
             this._silent = {};
@@ -107,23 +139,8 @@
                 return false;
             }
 
-            var property = this.properties[key];
-
-            //Run validation
-            if (property.validate && _.isFunction(property.validate)) {
-                var error = property.validate(value);
-                if (error) {
-                    if (options.error) {
-                        options.error(this, error, options);
-                    } else {
-                        this.trigger('error', this, error, options);
-                    }
-                    return false;
-                }
-            }
-
             //Run set function
-            return this._doSet(key, value);
+            return this._doSet(key, value, options);
         },
         get: function (attr) {
             return this.attributes[attr];

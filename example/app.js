@@ -23,20 +23,35 @@ App.start = function () {
     var TweetViewModel = Backbone.ViewModel.extend({
         properties: {
             "Name": {
-                get: function() { return this.model.get("from_user"); }
+                read: "from_user"
             },
             "Post": {
-                get: function () {
-                    var text = this.model.get("text");
-                    return text ? text.toUpperCase() : text;
+                read: function () {
+                    return this.getCase(this.model.get("text"));
                 }
             },
             "PostDate": {
-                get: function () {
+                read: function () {
                     var created = new Date(this.model.get("created_at"));
                     return created.toLocaleDateString();
                 }
+            },
+            "Casing": {
+                initial: "upper"
             }
+        },
+        getCase: function (text) {
+            if (!text)
+                return "";
+            else if (this.get("Casing") === "upper")
+                return text.toUpperCase()
+            else
+                return text.toLowerCase()
+        },
+        toggleCase: function () {
+            var newCase = (this.get("Casing") === "upper" ? "lower" : "upper");
+            this.set("Casing", newCase, { silent: true });
+            this.read("Post");
         }
     });
     
@@ -62,11 +77,20 @@ App.start = function () {
     });
     
     var TweetView = Backbone.View.extend({
+        events: {
+            "click .toggle-case": "toggleCase"
+        },
         template: Handlebars.compile($("#tweet-template").html()),
         tagName: "tr",
+        initialize: function () {
+            this.viewModel.on("change", this.render, this);
+        },
         render: function () {
             this.$el.html(this.template(this.viewModel.toJSON()));
             return this;
+        },
+        toggleCase: function () {
+            this.viewModel.toggleCase();
         }
     });
     

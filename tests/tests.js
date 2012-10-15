@@ -35,7 +35,7 @@ window.Tests = window.Tests || {};
                 },
                 "GetName": {
                     initial: "poo",
-                    get: function () {
+                    read: function () {
                         return this.model.get("GetName").toUpperCase();
                     }
                 }
@@ -62,13 +62,13 @@ window.Tests = window.Tests || {};
         var TestViewModel = Backbone.ViewModel.extend({
             properties: {
                 "SingleChange": {
-                    get: function () {
+                    read: function () {
                         return this.model.get("FirstName");
                     },
                     change: "FirstName"
                 },
                 "MultiChange": {
-                    get: function () {
+                    read: function () {
                         return this.model.get("Either") + this.model.get("Or");
                     },
                     change: ["Either", "Or"]
@@ -103,7 +103,7 @@ window.Tests = window.Tests || {};
         var TestViewModel = Backbone.ViewModel.extend({
             properties: {
                 "GetFunction": {
-                    get: function () {
+                    read: function () {
                         var name = this.model.get("FirstName");
                         return name 
                             ? name.toUpperCase()
@@ -112,7 +112,7 @@ window.Tests = window.Tests || {};
                     change: "FirstName"
                 },
                 "GetString": {
-                    get: "String",
+                    read: "String",
                     change: "Blah"
                 }
             }
@@ -134,7 +134,7 @@ window.Tests = window.Tests || {};
         });
     });
     
-    describe("Set tests", function () {
+    describe("Write tests", function () {
         var TestModel = Backbone.Model.extend({
             validate: function (attrs) {
                 if (attrs.Date - new Date() < 0)
@@ -152,13 +152,13 @@ window.Tests = window.Tests || {};
                         else
                             return undefined;
                     },
-                    set: function (value) {
+                    write: function (value) {
                         return this.model.set("Date", value);
                     },
                     change: "Date"
                 },
                 "SetByName": {
-                    set: "Name"
+                    write: "Name"
                 }
             }
         });
