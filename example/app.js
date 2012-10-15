@@ -23,17 +23,16 @@ App.start = function () {
     var TweetViewModel = Backbone.ViewModel.extend({
         properties: {
             "Name": {
-                parse: function () {
-                    return this.model.get("from_user");
-                }
+                get: function() { return this.model.get("from_user"); }
             },
             "Post": {
-                parse: function () {;
-                    return this.model.get("text").toUpperCase();
+                get: function () {
+                    var text = this.model.get("text");
+                    return text ? text.toUpperCase() : text;
                 }
             },
             "PostDate": {
-                parse: function () {;
+                get: function () {
                     var created = new Date(this.model.get("created_at"));
                     return created.toLocaleDateString();
                 }

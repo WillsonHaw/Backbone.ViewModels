@@ -23,7 +23,7 @@ window.Tests = window.Tests || {};
     describe("Initialization Tests", function () {
         var testModel = new TestModel();
         testModel.set("MatchedName", "initial model");
-        testModel.set("ParseName", "initial model");
+        testModel.set("GetName", "initial model");
         
         var TestViewModel = Backbone.ViewModel.extend({
             properties: {
@@ -33,10 +33,10 @@ window.Tests = window.Tests || {};
                 "UnmatchedName": {
                     initial: "initial value"
                 },
-                "ParseName": {
+                "GetName": {
                     initial: "poo",
-                    parse: function () {
-                        return this.model.get("ParseName").toUpperCase();
+                    get: function () {
+                        return this.model.get("GetName").toUpperCase();
                     }
                 }
             }
@@ -52,8 +52,8 @@ window.Tests = window.Tests || {};
             expect(testVM.get("UnmatchedName")).toEqual("initial value");
         });
         
-        it("should run the parse function if property matches and a parse function is defined", function () {
-            expect(testVM.get("ParseName")).toEqual("INITIAL MODEL");
+        it("should run the get function if property matches and a get function is defined", function () {
+            expect(testVM.get("GetName")).toEqual("INITIAL MODEL");
         });
     });
     
@@ -62,13 +62,13 @@ window.Tests = window.Tests || {};
         var TestViewModel = Backbone.ViewModel.extend({
             properties: {
                 "SingleChange": {
-                    parse: function () {
+                    get: function () {
                         return this.model.get("FirstName");
                     },
                     change: "FirstName"
                 },
                 "MultiChange": {
-                    parse: function () {
+                    get: function () {
                         return this.model.get("Either") + this.model.get("Or");
                     },
                     change: ["Either", "Or"]
@@ -95,6 +95,97 @@ window.Tests = window.Tests || {};
         it("should trigger a change if the model property matches the specified property", function () {
             testModel.set("AutoMatch", "Automagic");
             expect(testVM.get("AutoMatch")).toEqual("Automagic");
+        });
+    });
+    
+    describe("Get tests", function () {
+        var testModel = new TestModel();
+        var TestViewModel = Backbone.ViewModel.extend({
+            properties: {
+                "GetFunction": {
+                    get: function () {
+                        var name = this.model.get("FirstName");
+                        return name 
+                            ? name.toUpperCase()
+                            : "";
+                    },
+                    change: "FirstName"
+                },
+                "GetString": {
+                    get: "String",
+                    change: "Blah"
+                }
+            }
+        });
+        
+        var testVM = new TestViewModel(testModel);
+        
+        it("should run the get function on FirstName change", function () {
+            testModel.set("FirstName", "boop boop");
+            expect(testVM.get("GetFunction")).toEqual("BOOP BOOP");
+        });
+        
+        it("should get the model property of the string if a string is specified for get", function () {
+            testModel.set({
+                "Blah": "This triggers the change",
+                "String": "this is the value"
+            });
+            expect(testVM.get("GetString")).toEqual("this is the value");
+        });
+    });
+    
+    describe("Set tests", function () {
+        var TestModel = Backbone.Model.extend({
+            validate: function (attrs) {
+                if (attrs.Date - new Date() < 0)
+                    return "Date must not be in the past";
+                return undefined;
+            }
+        });
+        
+        var TestViewModel = Backbone.ViewModel.extend({
+            properties: {
+                "WithValidate": {
+                    validate: function (value) {
+                        if (value - new Date() > 0)
+                            return "Date must not be in the future";
+                        else
+                            return undefined;
+                    },
+                    set: function (value) {
+                        return this.model.set("Date", value);
+                    },
+                    change: "Date"
+                },
+                "SetByName": {
+                    set: "Name"
+                }
+            }
+        });
+        
+        var testModel = new TestModel();
+        var testVM = new TestViewModel(testModel);
+        var lastError = "";
+        testVM.on("error", function (model, err) { lastError = err; });
+        
+        it("should fail view model validation when setting the date in the future", function () {
+            var result = testVM.set("WithValidate", new Date(2013, 1, 1));
+            expect(lastError).toEqual("Date must not be in the future");
+            expect(result).toEqual(false);
+            expect(testModel.get("Date")).toEqual(undefined);
+        });
+        
+        it("should fail model validation when setting the date in the past", function () {
+            var result = testVM.set("WithValidate", new Date(2011, 1, 1));
+            expect(lastError).toEqual("Date must not be in the past");
+            expect(result).toEqual(false);
+            expect(testModel.get("Date")).toEqual(undefined);
+        });
+        
+        it("should set the model's attribute if the view model property's set is a string", function () {
+            var result = testVM.set("SetByName", "some string");
+            expect(result).toNotEqual(false);
+            expect(testModel.get("Name")).toEqual("some string");
         });
     });
 })(window.Tests, Backbone, _, jQuery, jasmine);

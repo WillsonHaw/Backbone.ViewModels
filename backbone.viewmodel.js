@@ -22,6 +22,33 @@
         },
         properties: {},
         _setAttribute: Backbone.Model.prototype.set,
+        _doGet: function (attr) {
+            var property = this.properties[attr];
+            
+            if (property.get) {
+                if (_.isFunction(property.get)) {
+                    var val = property.get.call(this, attr);
+                    this._setAttribute(attr, val, { silent: true });
+                } else {
+                    this._setAttribute(attr, this.model.get(property.get), { silent: true });
+                }
+            } else {
+                this._setAttribute(attr, this.model.get(attr), { silent: true });
+            }
+        },
+        _doSet: function (attr, value) {
+            var property = this.properties[attr];
+            
+            if (property.set) {
+                if (_.isFunction(property.set)) {
+                    return property.set.call(this, value, { silent: true });
+                } else {
+                    return this.model.set(property.set, value, { silent: true });
+                }
+            } else {
+                return this.model.set(attr, value, { silent: true });
+            }
+        },
         constructor: function (model) {
             var attrs = {};
             var self = this;
@@ -29,17 +56,12 @@
             this.model = model;
             _.each(this.properties, function (property, attr) {
                 attrs[attr] =
-                    (_.isFunction(property.parse) && property.parse.call(self)) ||
+                    (_.isFunction(property.get) && property.get.call(self)) ||
                     model.attributes[attr] ||
                     property.initial;
 
                 var changeCallback = function () {
-                    if (property.parse) {
-                        var val = property.parse.call(this);
-                        this._setAttribute(attr, val, { silent: true });
-                    } else {
-                        this._setAttribute(attr, this.model.get(attr), { silent: true });
-                    }
+                    this._doGet(attr);
                 };
 
                 //Automatically bind to model change events
@@ -54,9 +76,14 @@
                 }
             });
 
-            //our doParse triggers sets silently, so this triggers a change on the VM
+            //our doGet triggers sets silently, so this triggers a change on the VM
             this.model.on("change", function () {
                 this.trigger("change");
+            }, this);
+            
+            //raising errors in the model should also raise the same error in the VM
+            this.model.on("error", function (model, err, obj) {
+                this.trigger("error", model, err, obj);
             }, this);
 
             this.attributes = {};
@@ -95,8 +122,8 @@
                 }
             }
 
-            //Set model property
-            return this.model.set(key, value, options);
+            //Run set function
+            return this._doSet(key, value);
         },
         get: function (attr) {
             return this.attributes[attr];
