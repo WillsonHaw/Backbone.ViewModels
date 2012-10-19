@@ -1,4 +1,10 @@
-﻿/*global _:false, jQuery:false, Backbone:false */
+﻿/*
+    Backbone.ViewModel.js 0.0.1
+
+    (c) 2012 Willson Haw, iQmetrix Software
+*/
+
+/*global _:false, jQuery:false, Backbone:false */
 (function ($, _, Backbone) {
     "use strict";
 
@@ -67,8 +73,9 @@
                 result = true;
             }
 
-            if (result)
+            if (result) {
                 this._setAttribute(attr, value);
+            }
                 
             return result;
         },
@@ -83,6 +90,7 @@
             this._silent = {};
             this._pending = {};
             this.attributes = {};
+            this.initialize.apply(this, arguments);
             
             //Set all initial values first, otherwise read functions won't be able to use them
             _.each(this.properties, function (property, attr) {
@@ -93,7 +101,7 @@
             //Set all the model attribute values if they exist
             _.each(this.properties, function (property, attr) {
                 attrs[attr] =
-                    (_.isFunction(property.read) && property.read.call(self)) ||
+                    (_.isFunction(property.read) && property.read.call(self, attr)) ||
                     (_.isString(property.read) && model.attributes[property.read]) ||
                     model.attributes[attr] ||
                     property.initial;
@@ -130,7 +138,6 @@
             this._silent = {};
             this._pending = {};
             this._previousAttributes = _.clone(this.attributes);
-            this.initialize.apply(this, arguments);
         },
         set: function (key, value, options) {
             options = options || {};
@@ -144,6 +151,9 @@
         },
         get: function (attr) {
             return this.attributes[attr];
+        },
+        save: function () {
+            return this.model.save();
         }
     });
 
